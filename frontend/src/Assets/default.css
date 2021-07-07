@@ -1,0 +1,7 @@
+.pagination li{
+  padding: 10px;
+  background-color: cyan;
+  border: 1px solid darkorchid;
+  border-radius: 5px;
+  margin: 0px 3px;
+}

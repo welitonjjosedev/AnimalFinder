@@ -1,0 +1,53 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:13-alpine
+    command: ["postgres", "-c", "fsync=false", "-c", "full_page_writes=off"]
+    environment:
+      POSTGRES_PASSWORD: password
+    volumes:
+      - ./tmp/db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  app:
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    command: bash -c "bundle exec puma -C config/puma.rb"
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx.Dockerfile
+    depends_on:
+      - app
+    ports:
+      - 80:80
+
+  redis:
+    image: redis:alpine
+    command: redis-server --port 6379
+    ports:
+      - "6379:6379"
+    expose:
+      - "6379"
+
+  sidekiq:
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    command: sidekiq
+    tty: true
+    stdin_open: true
+    volumes:
+      - ".:/app"
+    environment:
+      - RAILS_ENV=development
+      - REDIS_URL=redis://@redis:6379/15
+      - API_AUTHORIZATION=development
+    depends_on:
+      - postgres
+      - redis
